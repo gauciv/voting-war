@@ -221,7 +221,7 @@ function App() {
             <div className="victory-hype">{victoryMessage}</div>
             <div className="victory-score">
               <span className="text-blue-400">{scores.team1}</span>
-              <span className="text-white/40 mx-3">—</span>
+              <span className="text-white/40 mx-2 sm:mx-3">—</span>
               <span className="text-red-400">{scores.team2}</span>
             </div>
             {countdown > 0 && (
@@ -234,25 +234,74 @@ function App() {
         </div>
       )}
 
-      {/* Three-column layout */}
-      <div className="h-full flex">
+      {/* ===== MOBILE: vertical stack / DESKTOP: 3-column ===== */}
+      <div className="h-full flex flex-col lg:flex-row">
+
+        {/* ===== MOBILE TOP BAR (title + stats) — hidden on desktop ===== */}
+        <div className="lg:hidden flex-shrink-0 flex items-center justify-between px-4 py-2 bg-slate-950 border-b border-white/5 relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.08),transparent_70%)]" />
+
+          {/* Title */}
+          <div className="relative z-10 flex items-center gap-2">
+            <h1 className="war-title text-xl">VOTING</h1>
+            <h1 className="war-title text-2xl">WAR</h1>
+          </div>
+
+          {/* Stats cluster */}
+          <div className="relative z-10 flex items-center gap-3">
+            {/* Matches */}
+            <div className="text-center">
+              <div className="text-white/30 text-[8px] font-bold tracking-wider uppercase">Matches</div>
+              <div className="text-sm font-black text-purple-400/80 tabular-nums">{matchesPlayed}</div>
+            </div>
+
+            {/* Smashes progress */}
+            <div className="text-center">
+              <div className="text-white/30 text-[8px] font-bold tracking-wider uppercase">
+                {scores.team1 + scores.team2}/{winScore}
+              </div>
+              <div className="w-16 h-1 rounded-full bg-slate-800 overflow-hidden border border-white/5 mt-0.5">
+                <div
+                  className="h-full bg-gradient-to-r from-purple-600 to-purple-400 transition-all duration-300 ease-out"
+                  style={{ width: `${Math.min(100, (totalVotes / winScore) * 100)}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Status dot */}
+            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase ${
+              isOnline
+                ? 'bg-emerald-500/10 border border-emerald-500/20'
+                : 'bg-red-500/10 border border-red-500/20'
+            }`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${
+                isOnline
+                  ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]'
+                  : 'bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.8)] animate-pulse'
+              }`} />
+              <span className={isOnline ? 'text-emerald-400' : 'text-red-400'}>
+                {isOnline ? 'LIVE' : 'OFF'}
+              </span>
+            </div>
+          </div>
+        </div>
 
         {/* ===== TEAM BLUE COLUMN ===== */}
-        <div className={`flex-1 flex flex-col items-center justify-center gap-8 bg-gradient-to-b from-blue-950 via-slate-900 to-slate-950 relative overflow-hidden ${isMatchOver ? 'opacity-30 pointer-events-none' : ''}`}>
+        <div className={`flex-1 flex flex-col items-center justify-center gap-3 sm:gap-5 lg:gap-8 bg-gradient-to-b from-blue-950 via-slate-900 to-slate-950 relative overflow-hidden py-4 lg:py-0 ${isMatchOver ? 'opacity-30 pointer-events-none' : ''}`}>
           {/* Background glow */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_60%,rgba(59,130,246,0.15),transparent_70%)]" />
 
           {/* Team label */}
           <div className="relative z-10 text-center">
-            <div className="text-blue-400/70 text-sm font-bold tracking-[0.3em] uppercase mb-1">Team</div>
-            <div className="text-4xl md:text-5xl font-black text-blue-400 drop-shadow-[0_0_20px_rgba(59,130,246,0.5)]">
+            <div className="text-blue-400/70 text-xs sm:text-sm font-bold tracking-[0.3em] uppercase mb-0.5 sm:mb-1">Team</div>
+            <div className="text-2xl sm:text-4xl lg:text-5xl font-black text-blue-400 drop-shadow-[0_0_20px_rgba(59,130,246,0.5)]">
               BLUE
             </div>
           </div>
 
           {/* Score display */}
           <div className="relative z-10 text-center">
-            <div className={`text-7xl md:text-8xl font-black tabular-nums transition-all duration-150 ${
+            <div className={`text-5xl sm:text-7xl lg:text-8xl font-black tabular-nums transition-all duration-150 ${
               smashing.team1 ? 'text-white scale-110' : 'text-blue-100'
             }`}>
               {scores.team1.toLocaleString()}
@@ -262,7 +311,7 @@ function App() {
                 {comboCount.team1}x COMBO!
               </div>
             )}
-            <div className="text-blue-400/50 text-sm font-medium mt-2">{team1Pct}% of votes</div>
+            <div className="text-blue-400/50 text-xs sm:text-sm font-medium mt-1 sm:mt-2">{team1Pct}% of votes</div>
           </div>
 
           {/* SMASH button */}
@@ -277,24 +326,24 @@ function App() {
 
           {/* Leading indicator */}
           {leader === 'team1' && !isMatchOver && (
-            <div className="absolute top-6 left-0 right-0 z-10 flex flex-col items-center leading-badge">
-              <span className="text-3xl drop-shadow-[0_0_12px_rgba(250,204,21,0.8)]">👑</span>
-              <span className="text-yellow-400 text-xs font-black tracking-[0.25em] uppercase mt-1">LEADING</span>
+            <div className="absolute top-2 sm:top-6 left-0 right-0 z-10 flex flex-col items-center leading-badge">
+              <span className="text-2xl sm:text-3xl drop-shadow-[0_0_12px_rgba(250,204,21,0.8)]">👑</span>
+              <span className="text-yellow-400 text-[10px] sm:text-xs font-black tracking-[0.25em] uppercase mt-0.5 sm:mt-1">LEADING</span>
             </div>
           )}
         </div>
 
-        {/* ===== MIDDLE SEPARATOR — HYPE CASTER ===== */}
-        <div className="w-52 md:w-64 flex flex-col items-center justify-between pt-12 pb-6 bg-slate-950 relative border-x border-white/5 overflow-hidden">
+        {/* ===== MIDDLE SEPARATOR — HYPE CASTER (desktop only) ===== */}
+        <div className="hidden lg:flex w-52 lg:w-64 flex-col items-center justify-between pt-12 pb-6 bg-slate-950 relative border-x border-white/5 overflow-hidden">
           {/* Background pattern */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.08),transparent_70%)]" />
 
           {/* Title + Status */}
           <div className="relative z-10 text-center">
-            <h1 className="war-title text-3xl md:text-4xl">
+            <h1 className="war-title text-3xl lg:text-4xl">
               VOTING
             </h1>
-            <h1 className="war-title text-4xl md:text-5xl -mt-1">
+            <h1 className="war-title text-4xl lg:text-5xl -mt-1">
               WAR
             </h1>
             <div className={`mt-5 flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase ${
@@ -365,7 +414,7 @@ function App() {
 
             {/* Hype message / offline feedback */}
             <div className={`hype-message ${hypeVisible ? 'hype-visible' : 'hype-hidden'} ${!isOnline ? 'offline-msg' : ''}`}>
-              <span className="text-sm md:text-base font-black text-center leading-tight">
+              <span className="text-sm lg:text-base font-black text-center leading-tight">
                 {hypeMessage}
               </span>
             </div>
@@ -378,21 +427,21 @@ function App() {
         </div>
 
         {/* ===== TEAM RED COLUMN ===== */}
-        <div className={`flex-1 flex flex-col items-center justify-center gap-8 bg-gradient-to-b from-red-950 via-slate-900 to-slate-950 relative overflow-hidden ${isMatchOver ? 'opacity-30 pointer-events-none' : ''}`}>
+        <div className={`flex-1 flex flex-col items-center justify-center gap-3 sm:gap-5 lg:gap-8 bg-gradient-to-b from-red-950 via-slate-900 to-slate-950 relative overflow-hidden py-4 lg:py-0 ${isMatchOver ? 'opacity-30 pointer-events-none' : ''}`}>
           {/* Background glow */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_60%,rgba(239,68,68,0.15),transparent_70%)]" />
 
           {/* Team label */}
           <div className="relative z-10 text-center">
-            <div className="text-red-400/70 text-sm font-bold tracking-[0.3em] uppercase mb-1">Team</div>
-            <div className="text-4xl md:text-5xl font-black text-red-400 drop-shadow-[0_0_20px_rgba(239,68,68,0.5)]">
+            <div className="text-red-400/70 text-xs sm:text-sm font-bold tracking-[0.3em] uppercase mb-0.5 sm:mb-1">Team</div>
+            <div className="text-2xl sm:text-4xl lg:text-5xl font-black text-red-400 drop-shadow-[0_0_20px_rgba(239,68,68,0.5)]">
               RED
             </div>
           </div>
 
           {/* Score display */}
           <div className="relative z-10 text-center">
-            <div className={`text-7xl md:text-8xl font-black tabular-nums transition-all duration-150 ${
+            <div className={`text-5xl sm:text-7xl lg:text-8xl font-black tabular-nums transition-all duration-150 ${
               smashing.team2 ? 'text-white scale-110' : 'text-red-100'
             }`}>
               {scores.team2.toLocaleString()}
@@ -402,7 +451,7 @@ function App() {
                 {comboCount.team2}x COMBO!
               </div>
             )}
-            <div className="text-red-400/50 text-sm font-medium mt-2">{team2Pct}% of votes</div>
+            <div className="text-red-400/50 text-xs sm:text-sm font-medium mt-1 sm:mt-2">{team2Pct}% of votes</div>
           </div>
 
           {/* SMASH button */}
@@ -417,12 +466,48 @@ function App() {
 
           {/* Leading indicator */}
           {leader === 'team2' && !isMatchOver && (
-            <div className="absolute top-6 left-0 right-0 z-10 flex flex-col items-center leading-badge">
-              <span className="text-3xl drop-shadow-[0_0_12px_rgba(250,204,21,0.8)]">👑</span>
-              <span className="text-yellow-400 text-xs font-black tracking-[0.25em] uppercase mt-1">LEADING</span>
+            <div className="absolute top-2 sm:top-6 left-0 right-0 z-10 flex flex-col items-center leading-badge">
+              <span className="text-2xl sm:text-3xl drop-shadow-[0_0_12px_rgba(250,204,21,0.8)]">👑</span>
+              <span className="text-yellow-400 text-[10px] sm:text-xs font-black tracking-[0.25em] uppercase mt-0.5 sm:mt-1">LEADING</span>
             </div>
           )}
         </div>
+
+        {/* ===== MOBILE BOTTOM BAR — hype + dual progress + credit ===== */}
+        <div className="lg:hidden flex-shrink-0 flex items-center justify-between px-4 py-2 bg-slate-950 border-t border-white/5 relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.08),transparent_70%)]" />
+
+          {/* Dual progress bar */}
+          <div className="relative z-10 flex-1 flex flex-col gap-1 mr-3">
+            <div className="flex justify-between text-[9px] font-bold tracking-wider">
+              <span className="text-blue-400">{team1Pct}%</span>
+              <span className="text-red-400">{team2Pct}%</span>
+            </div>
+            <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden border border-white/5 flex">
+              <div
+                className="h-full bg-gradient-to-r from-blue-600 to-blue-400 transition-all duration-500 ease-out"
+                style={{ width: `${team1Pct}%` }}
+              />
+              <div
+                className="h-full bg-gradient-to-l from-red-600 to-red-400 transition-all duration-500 ease-out"
+                style={{ width: `${team2Pct}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Hype message */}
+          <div className={`relative z-10 hype-message ${hypeVisible ? 'hype-visible' : 'hype-hidden'} ${!isOnline ? 'offline-msg' : ''}`} style={{ minHeight: 'auto' }}>
+            <span className="text-xs font-black text-center leading-tight whitespace-nowrap">
+              {hypeMessage}
+            </span>
+          </div>
+
+          {/* Credit */}
+          <div className="relative z-10 ml-3">
+            <div className="text-white/20 text-[10px] font-medium tracking-wider">@gauciv</div>
+          </div>
+        </div>
+
       </div>
     </div>
   )

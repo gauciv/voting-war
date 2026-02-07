@@ -26,6 +26,13 @@ body {
   min-width: 320px;
   min-height: 100vh;
   overflow: hidden;
+  overflow: hidden;
+}
+
+@media (max-height: 500px) {
+  body {
+    overflow-y: auto;
+  }
 }
 
 #root {
