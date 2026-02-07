@@ -135,6 +135,18 @@
   100% { transform: scale(2.5); opacity: 0; }
 }
 
+/* ===== War Title ===== */
+.war-title {
+  font-family: 'Black Ops One', system-ui, sans-serif;
+  background: linear-gradient(180deg, #f5f5f5 0%, #d4a017 30%, #b8860b 50%, #8b6914 70%, #4a3728 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 20px rgba(212, 160, 23, 0.3));
+  letter-spacing: 0.08em;
+  line-height: 1.1;
+}
+
 /* ===== VS Badge ===== */
 .vs-badge {
   width: 4rem;
@@ -213,16 +225,6 @@
 @keyframes crown-float {
   0%, 100% { transform: translateX(-50%) translateY(0); }
   50% { transform: translateX(-50%) translateY(-4px); }
-}
-
-/* ===== Error Toast ===== */
-.error-toast {
-  animation: toast-in 0.4s ease-out;
-}
-
-@keyframes toast-in {
-  0% { transform: translateX(-50%) translateY(-20px); opacity: 0; }
-  100% { transform: translateX(-50%) translateY(0); opacity: 1; }
 }
 
 /* ===== Tabular Numbers ===== */

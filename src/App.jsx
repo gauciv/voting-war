@@ -69,12 +69,14 @@ function App() {
     setTimeout(() => setSmashing(prev => ({ ...prev, [team]: false })), 400)
     setTimeout(() => setShakeScreen(false), 300)
 
-    // Combo counter
-    setComboCount(prev => ({ ...prev, [team]: prev[team] + 1 }))
-    if (comboTimerRef.current[team]) clearTimeout(comboTimerRef.current[team])
-    comboTimerRef.current[team] = setTimeout(() => {
-      setComboCount(prev => ({ ...prev, [team]: 0 }))
-    }, 1500)
+    // Combo counter — only active when server is online
+    if (isOnline) {
+      setComboCount(prev => ({ ...prev, [team]: prev[team] + 1 }))
+      if (comboTimerRef.current[team]) clearTimeout(comboTimerRef.current[team])
+      comboTimerRef.current[team] = setTimeout(() => {
+        setComboCount(prev => ({ ...prev, [team]: 0 }))
+      }, 1500)
+    }
 
     // Hype message
     setHypeMessage(HYPE_MESSAGES[Math.floor(Math.random() * HYPE_MESSAGES.length)])
@@ -103,21 +105,6 @@ function App() {
 
   return (
     <div className={`app-wrapper ${shakeScreen ? 'screen-shake' : ''}`}>
-      {/* Status indicator */}
-      <div className="absolute top-4 right-4 z-20 flex items-center gap-2 bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-full">
-        <div className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]' : 'bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.7)]'}`} />
-        <span className="text-white/80 text-xs font-medium tracking-wide uppercase">
-          {isOnline ? 'Live' : 'Offline'}
-        </span>
-      </div>
-
-      {/* Error toast */}
-      {error && (
-        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-30 bg-red-500/90 backdrop-blur text-white px-5 py-2.5 rounded-xl shadow-2xl text-sm font-medium error-toast">
-          ⚠️ {error}
-        </div>
-      )}
-
       {/* Three-column layout */}
       <div className="h-full flex">
 
@@ -171,24 +158,53 @@ function App() {
           {/* Background pattern */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.08),transparent_70%)]" />
 
-          {/* Title */}
+          {/* Title + Status */}
           <div className="relative z-10 text-center">
-            <h1 className="text-2xl md:text-3xl font-black bg-gradient-to-r from-blue-400 via-purple-400 to-red-400 bg-clip-text text-transparent">
+            <h1 className="war-title text-3xl md:text-4xl">
               VOTING
             </h1>
-            <h1 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-red-400 via-yellow-400 to-blue-400 bg-clip-text text-transparent -mt-1">
+            <h1 className="war-title text-4xl md:text-5xl -mt-1">
               WAR
             </h1>
+            <div className={`mt-3 flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase ${
+              isOnline
+                ? 'bg-emerald-500/10 border border-emerald-500/20'
+                : 'bg-red-500/10 border border-red-500/20'
+            }`}>
+              <div className={`w-2 h-2 rounded-full ${
+                isOnline
+                  ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]'
+                  : 'bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.8)] animate-pulse'
+              }`} />
+              <span className={isOnline ? 'text-emerald-400' : 'text-red-400'}>
+                {isOnline ? 'LIVE' : 'OFFLINE'}
+              </span>
+            </div>
+            {!isOnline && error && (
+              <div className="mt-2 text-red-400/70 text-[10px] font-medium leading-tight px-2">
+                {error}
+              </div>
+            )}
           </div>
 
-          {/* VS Badge */}
-          <div className="relative z-10 flex flex-col items-center gap-6">
-            {/* Progress bar */}
-            <div className="w-36 h-3 rounded-full bg-slate-800 overflow-hidden border border-white/10">
-              <div
-                className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${team1Pct}%` }}
-              />
+          {/* VS Badge + Progress */}
+          <div className="relative z-10 flex flex-col items-center gap-5">
+            {/* Dual progress bar */}
+            <div className="w-40 flex flex-col gap-1.5">
+              <div className="flex justify-between text-[10px] font-bold tracking-wider">
+                <span className="text-blue-400">{team1Pct}%</span>
+                <span className="text-red-400">{team2Pct}%</span>
+              </div>
+              <div className="w-full h-2.5 rounded-full bg-slate-800 overflow-hidden border border-white/5 flex">
+                <div
+                  className="h-full bg-gradient-to-r from-blue-600 to-blue-400 transition-all duration-500 ease-out"
+                  style={{ width: `${team1Pct}%` }}
+                />
+                <div
+                  className="h-full bg-gradient-to-l from-red-600 to-red-400 transition-all duration-500 ease-out"
+                  style={{ width: `${team2Pct}%` }}
+                />
+              </div>
             </div>
 
             <div className="vs-badge">
@@ -209,7 +225,7 @@ function App() {
             <div className="text-2xl font-black text-white/60 tabular-nums">
               {totalVotes.toLocaleString()}
             </div>
-            <div className="text-white/20 text-[10px] mt-2 tracking-wider">LIVE • 2s SYNC</div>
+            <div className="text-white/20 text-[10px] mt-2 tracking-wider">SYNC • EVERY 2s</div>
           </div>
         </div>
 
