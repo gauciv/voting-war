@@ -3,7 +3,8 @@ import axios from 'axios'
 import './App.css'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
-const POLL_INTERVAL = 2000
+const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3000/api/ws'
+const POLL_INTERVAL = 2000 // fallback polling if WS is unavailable
 
 const HYPE_MESSAGES = [
   '🔥 IT\'S HEATING UP!',
@@ -28,6 +29,14 @@ const OFFLINE_MESSAGES = [
   '🪫 DEAD SERVER!',
 ]
 
+const VICTORY_MESSAGES = [
+  '🏆 ABSOLUTE DOMINATION!',
+  '👑 BOW TO THE CHAMPION!',
+  '💀 TOTAL ANNIHILATION!',
+  '⚡ FLAWLESS VICTORY!',
+  '🔥 THEY NEVER STOOD A CHANCE!',
+]
+
 function App() {
   const [scores, setScores] = useState({ team1: 0, team2: 0 })
   const [error, setError] = useState(null)
@@ -40,26 +49,48 @@ function App() {
   const pendingUpdatesRef = useRef({ team1: 0, team2: 0 })
   const comboTimerRef = useRef({ team1: null, team2: null })
 
-  const fetchScores = useCallback(async () => {
-    try {
-      const response = await axios.get(`${API_URL}/scores`)
-      setScores(response.data)
+  // Match state — server-authoritative
+  const [matchState, setMatchState] = useState('active') // "active" | "victory" | "countdown"
+  const [winner, setWinner] = useState(null)
+  const [matchesPlayed, setMatchesPlayed] = useState(0)
+  const [countdown, setCountdown] = useState(0)
+  const [winScore, setWinScore] = useState(100)
+  const [victoryMessage, setVictoryMessage] = useState(VICTORY_MESSAGES[0])
+
+  // Apply server state update
+  const applyServerState = useCallback((data) => {
+    if (typeof data.team1 === 'number' && typeof data.team2 === 'number') {
+      setScores({ team1: data.team1, team2: data.team2 })
       setIsOnline(true)
       setError(null)
       pendingUpdatesRef.current = { team1: 0, team2: 0 }
+    }
+    if (data.matchState) setMatchState(data.matchState)
+    if (data.winner !== undefined) setWinner(data.winner)
+    if (typeof data.matchesPlayed === 'number') setMatchesPlayed(data.matchesPlayed)
+    if (typeof data.countdown === 'number') setCountdown(data.countdown)
+    if (typeof data.winScore === 'number') setWinScore(data.winScore)
+
+    // When entering victory, pick a random victory message
+    if (data.matchState === 'victory' || data.matchState === 'countdown') {
+      setVictoryMessage(VICTORY_MESSAGES[Math.floor(Math.random() * VICTORY_MESSAGES.length)])
+    }
+  }, [])
+
+  const fetchScores = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API_URL}/scores`)
+      applyServerState(response.data)
     } catch {
       setIsOnline(false)
       setError('Server offline — votes will sync when restored.')
     }
-  }, [])
+  }, [applyServerState])
 
   const postVote = async (team) => {
     try {
       const response = await axios.post(`${API_URL}/vote`, { team })
-      setScores(response.data)
-      setIsOnline(true)
-      setError(null)
-      pendingUpdatesRef.current[team] = 0
+      applyServerState(response.data)
     } catch {
       setIsOnline(false)
       setError('Server offline — reverting vote...')
@@ -69,6 +100,9 @@ function App() {
   }
 
   const handleVote = (team) => {
+    // Block voting if match is not active
+    if (matchState !== 'active') return
+
     // Optimistic update
     setScores(prev => ({ ...prev, [team]: prev[team] + 1 }))
     pendingUpdatesRef.current[team]++
@@ -113,20 +147,98 @@ function App() {
   const totalVotes = scores.team1 + scores.team2
   const team1Pct = totalVotes > 0 ? Math.round((scores.team1 / totalVotes) * 100) : 50
   const team2Pct = totalVotes > 0 ? Math.round((scores.team2 / totalVotes) * 100) : 50
+  const isMatchOver = matchState === 'victory' || matchState === 'countdown'
+
+  const wsRef = useRef(null)
+  const reconnectTimerRef = useRef(null)
+
+  // Connect via WebSocket for real-time updates
+  const connectWebSocket = useCallback(() => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) return
+
+    try {
+      const ws = new WebSocket(WS_URL)
+
+      ws.onopen = () => {
+        setIsOnline(true)
+        setError(null)
+      }
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          applyServerState(data)
+        } catch { /* ignore malformed messages */ }
+      }
+
+      ws.onclose = () => {
+        wsRef.current = null
+        // Try to reconnect after a delay
+        reconnectTimerRef.current = setTimeout(connectWebSocket, POLL_INTERVAL)
+      }
+
+      ws.onerror = () => {
+        setIsOnline(false)
+        setError('Server offline — votes will sync when restored.')
+        ws.close()
+      }
+
+      wsRef.current = ws
+    } catch {
+      // WebSocket failed, rely on polling fallback
+      setIsOnline(false)
+    }
+  }, [applyServerState])
 
   useEffect(() => {
+    // Initial REST fetch to get scores immediately
     fetchScores()
+
+    // Connect WebSocket for real-time push
+    connectWebSocket()
+
+    // Polling fallback — keeps trying even if WS is down
     const interval = setInterval(fetchScores, POLL_INTERVAL)
-    return () => clearInterval(interval)
-  }, [fetchScores])
+
+    return () => {
+      clearInterval(interval)
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current)
+      if (wsRef.current) wsRef.current.close()
+    }
+  }, [fetchScores, connectWebSocket])
 
   return (
     <div className={`app-wrapper ${shakeScreen ? 'screen-shake' : ''}`}>
+      {/* ===== VICTORY OVERLAY ===== */}
+      {isMatchOver && (
+        <div className="victory-overlay">
+          <div className="victory-content">
+            <div className="victory-trophy">🏆</div>
+            <h2 className={`victory-team ${winner === 'team1' ? 'text-blue-400' : 'text-red-400'}`}>
+              TEAM {winner === 'team1' ? 'BLUE' : 'RED'}
+            </h2>
+            <div className="victory-label">WINS!</div>
+            <div className="victory-hype">{victoryMessage}</div>
+            <div className="victory-score">
+              <span className="text-blue-400">{scores.team1}</span>
+              <span className="text-white/40 mx-3">—</span>
+              <span className="text-red-400">{scores.team2}</span>
+            </div>
+            {countdown > 0 && (
+              <div className="victory-countdown">
+                <div className="countdown-label">NEXT MATCH IN</div>
+                <div className="countdown-number">{countdown}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Three-column layout */}
       <div className="h-full flex">
 
         {/* ===== TEAM BLUE COLUMN ===== */}
-        <div className="flex-1 flex flex-col items-center justify-center gap-8 bg-gradient-to-b from-blue-950 via-slate-900 to-slate-950 relative overflow-hidden">
+        <div className={`flex-1 flex flex-col items-center justify-center gap-8 bg-gradient-to-b from-blue-950 via-slate-900 to-slate-950 relative overflow-hidden ${isMatchOver ? 'opacity-30 pointer-events-none' : ''}`}>
           {/* Background glow */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_60%,rgba(59,130,246,0.15),transparent_70%)]" />
 
@@ -156,14 +268,15 @@ function App() {
           {/* SMASH button */}
           <button
             onClick={() => handleVote('team1')}
-            className={`smash-btn smash-btn-blue ${smashing.team1 ? 'smashing' : ''}`}
+            disabled={isMatchOver}
+            className={`smash-btn smash-btn-blue ${smashing.team1 ? 'smashing' : ''} ${isMatchOver ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <span className="smash-btn-text">SMASH!</span>
             <div className="smash-ripple" />
           </button>
 
           {/* Leading indicator */}
-          {leader === 'team1' && (
+          {leader === 'team1' && !isMatchOver && (
             <div className="absolute top-6 left-0 right-0 z-10 flex flex-col items-center leading-badge">
               <span className="text-3xl drop-shadow-[0_0_12px_rgba(250,204,21,0.8)]">👑</span>
               <span className="text-yellow-400 text-xs font-black tracking-[0.25em] uppercase mt-1">LEADING</span>
@@ -207,11 +320,24 @@ function App() {
 
           {/* VS Badge + Progress */}
           <div className="relative z-10 flex flex-col items-center gap-5">
+            {/* Matches played tally */}
+            <div className="text-center">
+              <div className="text-white/30 text-[10px] font-bold tracking-[0.2em] uppercase mb-0.5">Matches Played</div>
+              <div className="text-lg font-black text-purple-400/80 tabular-nums">
+                {matchesPlayed}
+              </div>
+            </div>
+
             {/* Total smashes — above progress bar */}
             <div className="text-center">
-              <div className="text-white/30 text-[10px] font-bold tracking-[0.2em] uppercase mb-0.5">Total Smashes</div>
-              <div className="text-xl font-black text-white/60 tabular-nums">
-                {totalVotes.toLocaleString()}
+              <div className="text-white/30 text-[10px] font-bold tracking-[0.2em] uppercase mb-0.5">
+                Smashes ({scores.team1 + scores.team2}/{winScore})
+              </div>
+              <div className="w-40 h-1.5 rounded-full bg-slate-800 overflow-hidden border border-white/5 mt-1">
+                <div
+                  className="h-full bg-gradient-to-r from-purple-600 to-purple-400 transition-all duration-300 ease-out"
+                  style={{ width: `${Math.min(100, (totalVotes / winScore) * 100)}%` }}
+                />
               </div>
             </div>
 
@@ -252,7 +378,7 @@ function App() {
         </div>
 
         {/* ===== TEAM RED COLUMN ===== */}
-        <div className="flex-1 flex flex-col items-center justify-center gap-8 bg-gradient-to-b from-red-950 via-slate-900 to-slate-950 relative overflow-hidden">
+        <div className={`flex-1 flex flex-col items-center justify-center gap-8 bg-gradient-to-b from-red-950 via-slate-900 to-slate-950 relative overflow-hidden ${isMatchOver ? 'opacity-30 pointer-events-none' : ''}`}>
           {/* Background glow */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_60%,rgba(239,68,68,0.15),transparent_70%)]" />
 
@@ -282,14 +408,15 @@ function App() {
           {/* SMASH button */}
           <button
             onClick={() => handleVote('team2')}
-            className={`smash-btn smash-btn-red ${smashing.team2 ? 'smashing' : ''}`}
+            disabled={isMatchOver}
+            className={`smash-btn smash-btn-red ${smashing.team2 ? 'smashing' : ''} ${isMatchOver ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <span className="smash-btn-text">SMASH!</span>
             <div className="smash-ripple" />
           </button>
 
           {/* Leading indicator */}
-          {leader === 'team2' && (
+          {leader === 'team2' && !isMatchOver && (
             <div className="absolute top-6 left-0 right-0 z-10 flex flex-col items-center leading-badge">
               <span className="text-3xl drop-shadow-[0_0_12px_rgba(250,204,21,0.8)]">👑</span>
               <span className="text-yellow-400 text-xs font-black tracking-[0.25em] uppercase mt-1">LEADING</span>
