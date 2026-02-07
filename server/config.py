@@ -5,6 +5,8 @@ Only deployment-critical values come from env vars (keys, endpoints).
 Everything else uses sensible hardcoded defaults.
 """
 
+from __future__ import annotations
+
 import os
 from pathlib import Path
 from dotenv import load_dotenv
