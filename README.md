@@ -17,8 +17,8 @@ Two teams. One button each. First to 100 smashes wins. Scores sync in real-time 
 ```
 ┌──────────────┐         ┌──────────────┐         ┌──────────────┐
 │   S3 Bucket  │  HTTP   │  EC2 Instance│  boto3  │  DynamoDB    │
-│  (Frontend)  │───────▶│  (Backend)   │────────▶│  (Database)  │
-│  React SPA   │◀───────│  FastAPI     │◀────────│  Scores      │
+│  (Frontend)  │───────▶ │  (Backend)   │────────▶│  (Database)  │
+│  React SPA   │◀─────── │  FastAPI     │◀────────│  Scores      │
 └──────────────┘  WS/REST└──────────────┘         └──────────────┘
      Browser          Port 3000              Table: voting-war-scores
 ```
