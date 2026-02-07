@@ -182,6 +182,13 @@
   -webkit-text-fill-color: transparent;
 }
 
+.hype-message.offline-msg {
+  background: linear-gradient(135deg, #f87171, #ef4444);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 .hype-visible {
   opacity: 1;
   transform: scale(1);
@@ -223,8 +230,8 @@
 }
 
 @keyframes crown-float {
-  0%, 100% { transform: translateX(-50%) translateY(0); }
-  50% { transform: translateX(-50%) translateY(-4px); }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
 }
 
 /* ===== Tabular Numbers ===== */

@@ -18,6 +18,16 @@ const HYPE_MESSAGES = [
   '⭐ LEGENDARY!',
 ]
 
+const OFFLINE_MESSAGES = [
+  '🚫 VOTE NOT COUNTED!',
+  '❌ NO CONNECTION!',
+  '💤 SERVER IS SLEEPING...',
+  '🔌 PLUG IT BACK IN!',
+  '⛔ SMASH IS USELESS RN',
+  '😵 NOTHING HAPPENED!',
+  '🪫 DEAD SERVER!',
+]
+
 function App() {
   const [scores, setScores] = useState({ team1: 0, team2: 0 })
   const [error, setError] = useState(null)
@@ -76,10 +86,17 @@ function App() {
       comboTimerRef.current[team] = setTimeout(() => {
         setComboCount(prev => ({ ...prev, [team]: 0 }))
       }, 1500)
+    } else {
+      // Reset combos when offline
+      setComboCount({ team1: 0, team2: 0 })
     }
 
-    // Hype message
-    setHypeMessage(HYPE_MESSAGES[Math.floor(Math.random() * HYPE_MESSAGES.length)])
+    // Hype message or offline feedback
+    if (isOnline) {
+      setHypeMessage(HYPE_MESSAGES[Math.floor(Math.random() * HYPE_MESSAGES.length)])
+    } else {
+      setHypeMessage(OFFLINE_MESSAGES[Math.floor(Math.random() * OFFLINE_MESSAGES.length)])
+    }
     setHypeVisible(true)
     setTimeout(() => setHypeVisible(false), 1200)
 
@@ -147,14 +164,15 @@ function App() {
 
           {/* Leading indicator */}
           {leader === 'team1' && (
-            <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10 text-yellow-400 text-xs font-bold tracking-widest uppercase flex items-center gap-1.5 leading-badge">
-              👑 Leading
+            <div className="absolute top-6 left-0 right-0 z-10 flex flex-col items-center leading-badge">
+              <span className="text-3xl drop-shadow-[0_0_12px_rgba(250,204,21,0.8)]">👑</span>
+              <span className="text-yellow-400 text-xs font-black tracking-[0.25em] uppercase mt-1">LEADING</span>
             </div>
           )}
         </div>
 
         {/* ===== MIDDLE SEPARATOR — HYPE CASTER ===== */}
-        <div className="w-52 md:w-64 flex flex-col items-center justify-between py-8 bg-slate-950 relative border-x border-white/5 overflow-hidden">
+        <div className="w-52 md:w-64 flex flex-col items-center justify-between pt-12 pb-6 bg-slate-950 relative border-x border-white/5 overflow-hidden">
           {/* Background pattern */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.08),transparent_70%)]" />
 
@@ -166,7 +184,7 @@ function App() {
             <h1 className="war-title text-4xl md:text-5xl -mt-1">
               WAR
             </h1>
-            <div className={`mt-3 flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase ${
+            <div className={`mt-5 flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase ${
               isOnline
                 ? 'bg-emerald-500/10 border border-emerald-500/20'
                 : 'bg-red-500/10 border border-red-500/20'
@@ -181,7 +199,7 @@ function App() {
               </span>
             </div>
             {!isOnline && error && (
-              <div className="mt-2 text-red-400/70 text-[10px] font-medium leading-tight px-2">
+              <div className="mt-3 text-red-400/70 text-[10px] font-medium leading-tight px-2">
                 {error}
               </div>
             )}
@@ -189,6 +207,14 @@ function App() {
 
           {/* VS Badge + Progress */}
           <div className="relative z-10 flex flex-col items-center gap-5">
+            {/* Total smashes — above progress bar */}
+            <div className="text-center">
+              <div className="text-white/30 text-[10px] font-bold tracking-[0.2em] uppercase mb-0.5">Total Smashes</div>
+              <div className="text-xl font-black text-white/60 tabular-nums">
+                {totalVotes.toLocaleString()}
+              </div>
+            </div>
+
             {/* Dual progress bar */}
             <div className="w-40 flex flex-col gap-1.5">
               <div className="flex justify-between text-[10px] font-bold tracking-wider">
@@ -211,21 +237,17 @@ function App() {
               <span className="text-2xl font-black text-white">VS</span>
             </div>
 
-            {/* Hype message */}
-            <div className={`hype-message ${hypeVisible ? 'hype-visible' : 'hype-hidden'}`}>
+            {/* Hype message / offline feedback */}
+            <div className={`hype-message ${hypeVisible ? 'hype-visible' : 'hype-hidden'} ${!isOnline ? 'offline-msg' : ''}`}>
               <span className="text-sm md:text-base font-black text-center leading-tight">
                 {hypeMessage}
               </span>
             </div>
           </div>
 
-          {/* Total counter */}
+          {/* Credit */}
           <div className="relative z-10 text-center">
-            <div className="text-white/30 text-xs font-bold tracking-[0.2em] uppercase mb-1">Total Smashes</div>
-            <div className="text-2xl font-black text-white/60 tabular-nums">
-              {totalVotes.toLocaleString()}
-            </div>
-            <div className="text-white/20 text-[10px] mt-2 tracking-wider">SYNC • EVERY 2s</div>
+            <div className="text-white/20 text-[11px] font-medium tracking-wider">@gauciv</div>
           </div>
         </div>
 
@@ -268,8 +290,9 @@ function App() {
 
           {/* Leading indicator */}
           {leader === 'team2' && (
-            <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10 text-yellow-400 text-xs font-bold tracking-widest uppercase flex items-center gap-1.5 leading-badge">
-              👑 Leading
+            <div className="absolute top-6 left-0 right-0 z-10 flex flex-col items-center leading-badge">
+              <span className="text-3xl drop-shadow-[0_0_12px_rgba(250,204,21,0.8)]">👑</span>
+              <span className="text-yellow-400 text-xs font-black tracking-[0.25em] uppercase mt-1">LEADING</span>
             </div>
           )}
         </div>
