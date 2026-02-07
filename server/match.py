@@ -66,29 +66,32 @@ class MatchManager:
         Process a vote. If the match is not active, reject it.
         If the vote causes a win, transition to victory state.
         Returns the full match state.
+
+        The entire check → increment → win-check sequence is held
+        under a single lock acquisition to prevent TOCTOU races
+        (e.g. score overshooting WIN_SCORE when two votes land
+        at the exact same moment).
         """
         async with self._lock:
             if self._state != "active":
                 # Match is over or resetting — ignore votes
                 return await self._unlocked_full_state()
 
-        # Increment score in the store
-        store = get_store()
-        scores = await store.increment(team)
+            # Increment score in the store (still under lock)
+            store = get_store()
+            scores = await store.increment(team)
 
-        # Check win condition
-        async with self._lock:
+            # Check win condition
             if scores.get("team1", 0) >= settings.WIN_SCORE or scores.get("team2", 0) >= settings.WIN_SCORE:
-                if self._state == "active":
-                    self._state = "victory"
-                    self._winner = "team1" if scores["team1"] >= settings.WIN_SCORE else "team2"
-                    logger.info(
-                        "🏆 %s wins! (team1=%d, team2=%d) — match #%d",
-                        self._winner, scores["team1"], scores["team2"],
-                        self._matches_played + 1,
-                    )
-                    # Start countdown in background
-                    self._start_countdown()
+                self._state = "victory"
+                self._winner = "team1" if scores["team1"] >= settings.WIN_SCORE else "team2"
+                logger.info(
+                    "🏆 %s wins! (team1=%d, team2=%d) — match #%d",
+                    self._winner, scores["team1"], scores["team2"],
+                    self._matches_played + 1,
+                )
+                # Start countdown in background
+                self._start_countdown()
 
         return await self.get_full_state()
 
